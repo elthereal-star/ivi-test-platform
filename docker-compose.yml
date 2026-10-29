@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: ivi-test-db
+    environment:
+      POSTGRES_USER: ivi
+      POSTGRES_PASSWORD: ivi
+      POSTGRES_DB: ivi_test
+    ports:
+      - "5432:5432"
+    volumes:
+      - ivi-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ivi -d ivi_test"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./backend
+    container_name: ivi-test-api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://ivi:ivi@db:5432/ivi_test
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      AUTOMATION_TOKEN: ${AUTOMATION_TOKEN:-dev-automation-token}
+      SEED_ON_STARTUP: "true"
+      AI_BASE_URL: ${AI_BASE_URL:-}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-deepseek-chat}
+    ports:
+      - "8000:8000"
+    profiles: ["full"]
+
+volumes:
+  ivi-db-data:
